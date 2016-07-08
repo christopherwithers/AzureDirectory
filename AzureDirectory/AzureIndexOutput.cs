@@ -13,13 +13,13 @@ namespace Lucene.Net.Store.Azure
     /// </summary>
     public class AzureIndexOutput : IndexOutput
     {
-        private AzureDirectory _azureDirectory;
+        private readonly AzureDirectory _azureDirectory;
         private CloudBlobContainer _blobContainer;
-        private string _name;
+        private readonly string _name;
         private IndexOutput _indexOutput;
-        private Mutex _fileMutex;
+        private readonly Mutex _fileMutex;
         private ICloudBlob _blob;
-        public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
+        public Lucene.Net.Store.Directory CacheDirectory => _azureDirectory.CacheDirectory;
 
         public AzureIndexOutput(AzureDirectory azureDirectory, ICloudBlob blob)
         {
@@ -123,11 +123,7 @@ namespace Lucene.Net.Store.Azure
                 // seek back to beginning of comrpessed stream
                 compressedStream.Seek(0, SeekOrigin.Begin);
 
-                Debug.WriteLine(string.Format("COMPRESSED {0} -> {1} {2}% to {3}",
-                   originalLength,
-                   compressedStream.Length,
-                   ((float)compressedStream.Length / (float)originalLength) * 100,
-                   _name));
+                Debug.WriteLine("COMPRESSED {0} -> {1} {2}% to {3}", originalLength, compressedStream.Length, ((float)compressedStream.Length / (float)originalLength) * 100, _name);
             }
             catch
             {
@@ -138,13 +134,7 @@ namespace Lucene.Net.Store.Azure
             return compressedStream;
         }
 
-        public override long Length
-        {
-            get
-            {
-                return _indexOutput.Length;
-            }
-        }
+        public override long Length => _indexOutput.Length;
 
         public override void WriteByte(byte b)
         {
@@ -161,13 +151,7 @@ namespace Lucene.Net.Store.Azure
             _indexOutput.WriteBytes(b, offset, length);
         }
 
-        public override long FilePointer
-        {
-            get
-            {
-                return _indexOutput.FilePointer;
-            }
-        }
+        public override long FilePointer => _indexOutput.FilePointer;
 
         public override void Seek(long pos)
         {

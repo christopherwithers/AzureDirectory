@@ -15,19 +15,19 @@ namespace Lucene.Net.Store.Azure
         private AzureDirectory _azureDirectory;
         private CloudBlobContainer _blobContainer;
         private ICloudBlob _blob;
-        private string _name;
+        private readonly string _name;
 
         private IndexInput _indexInput;
-        private Mutex _fileMutex;
+        private readonly Mutex _fileMutex;
 
-        public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
+        public Directory CacheDirectory => _azureDirectory.CacheDirectory;
 
         public AzureIndexInput(AzureDirectory azuredirectory, ICloudBlob blob)
         {
             _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
 
 #if FULLDEBUG
-            Debug.WriteLine(String.Format("opening {0} ", _name));
+            Debug.WriteLine($"opening {_name} ");
 #endif
             _fileMutex = BlobMutexManager.GrabMutex(_name);
             _fileMutex.WaitOne();
@@ -53,13 +53,14 @@ namespace Lucene.Net.Store.Azure
                     if (hasMetadataValue) long.TryParse(blobLengthMetadata, out blobLength);
 
                     string blobLastModifiedMetadata;
-                    long longLastModified = 0;
-                    DateTime blobLastModifiedUTC = blob.Properties.LastModified.Value.UtcDateTime;
-                    if (blob.Metadata.TryGetValue("CachedLastModified", out blobLastModifiedMetadata)) {
+                    DateTime blobLastModifiedUtc = blob.Properties.LastModified.Value.UtcDateTime;
+                    if (blob.Metadata.TryGetValue("CachedLastModified", out blobLastModifiedMetadata))
+                    {
+                        long longLastModified = 0;
                         if (long.TryParse(blobLastModifiedMetadata, out longLastModified))
-                            blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
+                            blobLastModifiedUtc = new DateTime(longLastModified).ToUniversalTime();
                     }
-                    
+
                     if (cachedLength != blobLength)
                         fFileNeeded = true;
                     else
@@ -70,9 +71,9 @@ namespace Lucene.Net.Store.Azure
                         DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                         var cachedLastModifiedUTC = start.AddMilliseconds(unixDate).ToUniversalTime();
                         
-                        if (cachedLastModifiedUTC != blobLastModifiedUTC)
+                        if (cachedLastModifiedUTC != blobLastModifiedUtc)
                         {
-                            var timeSpan = blobLastModifiedUTC.Subtract(cachedLastModifiedUTC);
+                            var timeSpan = blobLastModifiedUtc.Subtract(cachedLastModifiedUTC);
                             if (timeSpan.TotalSeconds > 1)
                                 fFileNeeded = true;
                             else
@@ -102,7 +103,7 @@ namespace Lucene.Net.Store.Azure
                             _blob.DownloadToStream(fileStream);
 
                             fileStream.Flush();
-                            Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, fileStream.Length));
+                            Debug.WriteLine("GET {0} RETREIVED {1} bytes", _name, fileStream.Length);
                         }
                     }
 
@@ -112,7 +113,7 @@ namespace Lucene.Net.Store.Azure
                 else
                 {
 #if FULLDEBUG
-                    Debug.WriteLine(String.Format("Using cached file for {0}", _name));
+                    Debug.WriteLine($"Using cached file for {_name}");
 #endif
 
                     // open the file in read only mode
@@ -134,7 +135,7 @@ namespace Lucene.Net.Store.Azure
                 // get the deflated blob
                 _blob.DownloadToStream(deflatedStream);
 
-                Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, deflatedStream.Length));
+                Debug.WriteLine("GET {0} RETREIVED {1} bytes", _name, deflatedStream.Length);
 
                 // seek back to begininng
                 deflatedStream.Seek(0, SeekOrigin.Begin);
@@ -163,7 +164,7 @@ namespace Lucene.Net.Store.Azure
             try
             {
 #if FULLDEBUG
-                Debug.WriteLine(String.Format("Creating clone for {0}", cloneInput._name));
+                Debug.WriteLine($"Creating clone for {cloneInput._name}");
 #endif
                 _azureDirectory = cloneInput._azureDirectory;
                 _blobContainer = cloneInput._blobContainer;
@@ -174,7 +175,7 @@ namespace Lucene.Net.Store.Azure
             {
                 // sometimes we get access denied on the 2nd stream...but not always. I haven't tracked it down yet
                 // but this covers our tail until I do
-                Debug.WriteLine(String.Format("Dagnabbit, falling back to memory clone for {0}", cloneInput._name));
+                Debug.WriteLine($"Dagnabbit, falling back to memory clone for {cloneInput._name}");
             }
             finally
             {
@@ -192,13 +193,7 @@ namespace Lucene.Net.Store.Azure
             _indexInput.ReadBytes(b, offset, len);
         }
 
-        public override long FilePointer
-        {
-            get
-            {
-                return _indexInput.FilePointer;
-            }
-        }
+        public override long FilePointer => _indexInput.FilePointer;
 
         public override void Seek(long pos)
         {
@@ -211,7 +206,7 @@ namespace Lucene.Net.Store.Azure
             try
             {
 #if FULLDEBUG
-                Debug.WriteLine(String.Format("CLOSED READSTREAM local {0}", _name));
+                Debug.WriteLine($"CLOSED READSTREAM local {_name}");
 #endif
                 _indexInput.Dispose();
                 _indexInput = null;
@@ -231,16 +226,16 @@ namespace Lucene.Net.Store.Azure
             return _indexInput.Length();
         }
 
-        public override System.Object Clone()
+        public override object Clone()
         {
             IndexInput clone = null;
             try
             {
                 _fileMutex.WaitOne();
-                AzureIndexInput input = new AzureIndexInput(this);
-                clone = (IndexInput)input;
+                var input = new AzureIndexInput(this);
+                clone = input;
             }
-            catch (System.Exception err)
+            catch (Exception err)
             {
                 Debug.WriteLine(err.ToString());
             }

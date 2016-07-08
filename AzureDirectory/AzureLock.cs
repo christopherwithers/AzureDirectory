@@ -12,8 +12,8 @@ namespace Lucene.Net.Store.Azure
     /// </summary>
     public class AzureLock : Lock
     {
-        private string _lockFile;
-        private AzureDirectory _azureDirectory;
+        private readonly string _lockFile;
+        private readonly AzureDirectory _azureDirectory;
         private string _leaseid;
 
         public AzureLock(string lockFile, AzureDirectory directory)
@@ -23,16 +23,16 @@ namespace Lucene.Net.Store.Azure
         }
 
         #region Lock methods
-        override public bool IsLocked()
+        public override bool IsLocked()
         {
             var blob = _azureDirectory.BlobContainer.GetBlobReferenceFromServer(_lockFile);
             try
             {
                 Debug.Print("IsLocked() : {0}", _leaseid);
-                if (String.IsNullOrEmpty(_leaseid))
+                if (string.IsNullOrEmpty(_leaseid))
                 {
                     var tempLease = blob.AcquireLease(TimeSpan.FromSeconds(60), _leaseid);
-                    if (String.IsNullOrEmpty(tempLease))
+                    if (string.IsNullOrEmpty(tempLease))
                     {
                         Debug.Print("IsLocked() : TRUE");
                         return true;
@@ -40,7 +40,7 @@ namespace Lucene.Net.Store.Azure
                     blob.ReleaseLease(new AccessCondition() { LeaseId = tempLease });
                 }
                 Debug.Print("IsLocked() : {0}", _leaseid);
-                return String.IsNullOrEmpty(_leaseid);
+                return string.IsNullOrEmpty(_leaseid);
             }
             catch (StorageException webErr)
             {
@@ -57,7 +57,7 @@ namespace Lucene.Net.Store.Azure
             try
             {
                 Debug.Print("AzureLock:Obtain({0}) : {1}", _lockFile, _leaseid);
-                if (String.IsNullOrEmpty(_leaseid))
+                if (string.IsNullOrEmpty(_leaseid))
                 {
                     _leaseid = blob.AcquireLease(TimeSpan.FromSeconds(60), _leaseid);
                     Debug.Print("AzureLock:Obtain({0}): AcquireLease : {1}", _lockFile, _leaseid);
@@ -68,13 +68,13 @@ namespace Lucene.Net.Store.Azure
                         {
                             try
                             {
-                                AzureLock al = (AzureLock)obj;
+                                var al = (AzureLock)obj;
                                 al.Renew();
                             }
                             catch (Exception err) { Debug.Print(err.ToString()); } 
                         }, this, interval, interval);
                 }
-                return !String.IsNullOrEmpty(_leaseid);
+                return !string.IsNullOrEmpty(_leaseid);
             }
             catch (StorageException webErr)
             {
@@ -88,7 +88,7 @@ namespace Lucene.Net.Store.Azure
 
         public void Renew()
         {
-            if (!String.IsNullOrEmpty(_leaseid))
+            if (!string.IsNullOrEmpty(_leaseid))
             {
                 Debug.Print("AzureLock:Renew({0} : {1}", _lockFile, _leaseid);
                 var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
@@ -99,7 +99,7 @@ namespace Lucene.Net.Store.Azure
         public override void Release()
         {
             Debug.Print("AzureLock:Release({0}) {1}", _lockFile, _leaseid);
-            if (!String.IsNullOrEmpty(_leaseid))
+            if (!string.IsNullOrEmpty(_leaseid))
             {
                 var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
                 blob.ReleaseLease(new AccessCondition { LeaseId = _leaseid });
@@ -121,15 +121,15 @@ namespace Lucene.Net.Store.Azure
             {
                 blob.BreakLease();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
             }
             _leaseid = null;
         }
 
-        public override System.String ToString()
+        public override string ToString()
         {
-            return String.Format("AzureLock@{0}.{1}", _lockFile, _leaseid);
+            return $"AzureLock@{_lockFile}.{_leaseid}";
         }
 
         private bool _handleWebException(ICloudBlob blob, StorageException err)
