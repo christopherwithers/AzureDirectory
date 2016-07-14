@@ -59,7 +59,7 @@ namespace Lucene.Net.Store.Azure
                 Debug.Print("AzureLock:Obtain({0}) : {1}", _lockFile, _leaseid);
                 if (string.IsNullOrEmpty(_leaseid))
                 {
-                    _leaseid = blob.AcquireLease(TimeSpan.FromSeconds(60), _leaseid);
+                    _leaseid = blob.AcquireLease(TimeSpan.FromSeconds(60), _leaseid ?? string.Empty);
                     Debug.Print("AzureLock:Obtain({0}): AcquireLease : {1}", _lockFile, _leaseid);
                     
                     // keep the lease alive by renewing every 30 seconds
