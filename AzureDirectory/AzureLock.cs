@@ -14,7 +14,7 @@ namespace Lucene.Net.Store.Azure
     {
         private readonly string _lockFile;
         private readonly AzureDirectory _azureDirectory;
-        private string _leaseid;
+        private string _leaseid = string.Empty;
 
         public AzureLock(string lockFile, AzureDirectory directory)
         {
